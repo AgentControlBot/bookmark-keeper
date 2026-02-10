@@ -2,213 +2,453 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    /* Mono Theme Tokens */
+    :root {
+      --background: #ffffff;
+      --foreground: #0a0a0a;
+      --primary: #171717;
+      --primary-foreground: #fafafa;
+      --secondary: #f5f5f5;
+      --secondary-foreground: #171717;
+      --muted: #f5f5f5;
+      --muted-foreground: #737373;
+      --border: #e5e5e5;
+      --destructive: #ef4444;
+      --destructive-foreground: #fafafa;
+      --card: #ffffff;
+      --card-foreground: #0a0a0a;
+      --accent: #f5f5f5;
+      --accent-foreground: #171717;
+      --input: #e5e5e5;
+      --ring: #0a0a0a;
+      --radius: 0.5rem;
+    }
+
+    .dark {
+      --background: #0a0a0a;
+      --foreground: #fafafa;
+      --primary: #fafafa;
+      --primary-foreground: #171717;
+      --secondary: #262626;
+      --secondary-foreground: #fafafa;
+      --muted: #262626;
+      --muted-foreground: #a3a3a3;
+      --border: #262626;
+      --destructive: #7f1d1d;
+      --destructive-foreground: #fafafa;
+      --card: #0a0a0a;
+      --card-foreground: #fafafa;
+      --accent: #262626;
+      --accent-foreground: #fafafa;
+      --input: #262626;
+      --ring: #d4d4d4;
+    }
+
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
+
     body {
       width: 340px;
       padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 14px;
-      color: #333;
-      margin: 0;
+      color: var(--foreground);
+      background: var(--background);
+      line-height: 1.5;
     }
-    h1 {
-      font-size: 18px;
-      margin: 0 0 12px 0;
-      color: #1a73e8;
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    h1 .icon {
-      font-size: 24px;
+
+    .header h1 svg {
+      width: 20px;
+      height: 20px;
+      color: var(--foreground);
     }
+
+    .theme-toggle {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: calc(var(--radius) - 2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted-foreground);
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .theme-toggle:hover {
+      background: var(--accent);
+      color: var(--accent-foreground);
+    }
+
+    .theme-toggle svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Page Info Card */
     .page-info {
-      background: #f8f9fa;
-      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       padding: 12px;
       margin-bottom: 16px;
     }
+
     .page-title {
       font-size: 13px;
       font-weight: 500;
-      color: #333;
+      color: var(--card-foreground);
       word-wrap: break-word;
       line-height: 1.4;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
+
     .page-url {
       font-size: 11px;
-      color: #666;
+      font-family: 'Geist Mono', monospace;
+      color: var(--muted-foreground);
       word-wrap: break-word;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
     .selection-indicator {
       font-size: 12px;
-      color: #34a853;
-      margin-top: 8px;
-      padding: 6px 10px;
-      background: #e6f4ea;
-      border-radius: 4px;
+      color: var(--foreground);
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: var(--muted);
+      border-radius: calc(var(--radius) - 2px);
       display: none;
+      align-items: center;
+      gap: 6px;
     }
+
     .selection-indicator.visible {
-      display: block;
+      display: flex;
     }
-    .selection-indicator .icon {
-      margin-right: 4px;
+
+    .selection-indicator svg {
+      width: 14px;
+      height: 14px;
+      color: var(--foreground);
+      flex-shrink: 0;
     }
+
+    .selection-indicator .char-count {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      color: var(--muted-foreground);
+    }
+
+    /* Note Section */
     .note-section {
       margin-bottom: 16px;
     }
+
     .note-section label {
       display: block;
       font-size: 12px;
-      color: #666;
+      font-weight: 500;
+      color: var(--foreground);
       margin-bottom: 6px;
     }
+
     .note-section textarea {
       width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
+      padding: 10px 12px;
+      border: 1px solid var(--input);
+      border-radius: calc(var(--radius) - 2px);
       font-size: 13px;
-      font-family: inherit;
+      font-family: 'Geist', sans-serif;
+      background: var(--background);
+      color: var(--foreground);
       resize: vertical;
       min-height: 60px;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
+
+    .note-section textarea::placeholder {
+      color: var(--muted-foreground);
+    }
+
     .note-section textarea:focus {
       outline: none;
-      border-color: #1a73e8;
-      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+      border-color: var(--ring);
+      box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.1);
     }
+
+    .dark .note-section textarea:focus {
+      box-shadow: 0 0 0 2px rgba(250, 250, 250, 0.1);
+    }
+
+    /* Buttons */
     button.primary {
       width: 100%;
-      padding: 12px 16px;
+      padding: 10px 16px;
       font-size: 14px;
       font-weight: 500;
-      background: #1a73e8;
-      color: white;
+      font-family: 'Geist', sans-serif;
+      background: var(--primary);
+      color: var(--primary-foreground);
       border: none;
-      border-radius: 6px;
+      border-radius: calc(var(--radius) - 2px);
       cursor: pointer;
       margin-bottom: 12px;
-      transition: background 0.2s, transform 0.1s;
+      transition: opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
+
     button.primary:hover {
-      background: #1557b0;
+      opacity: 0.9;
     }
-    button.primary:active {
-      transform: scale(0.98);
-    }
+
     button.primary:disabled {
-      background: #ccc;
+      opacity: 0.5;
       cursor: not-allowed;
-      transform: none;
     }
+
+    button.primary svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    button.primary svg.spinner {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Status */
     #status {
-      padding: 10px;
-      border-radius: 6px;
+      padding: 10px 12px;
+      border-radius: calc(var(--radius) - 2px);
       text-align: center;
-      min-height: 20px;
       font-size: 13px;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
-    #status:empty {
-      padding: 0;
-      min-height: 0;
+
+    #status.visible {
+      display: flex;
     }
+
+    #status svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
     #status.success {
-      background: #d4edda;
-      color: #155724;
+      background: var(--muted);
+      color: var(--foreground);
     }
+
     #status.error {
-      background: #f8d7da;
-      color: #721c24;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--destructive);
+      border: 1px solid rgba(239, 68, 68, 0.2);
     }
+
+    .dark #status.error {
+      background: rgba(127, 29, 29, 0.3);
+    }
+
     #status.loading {
-      background: #fff3cd;
-      color: #856404;
+      background: var(--muted);
+      color: var(--muted-foreground);
     }
+
+    /* Settings */
     .settings {
       margin-top: 16px;
       padding-top: 16px;
-      border-top: 1px solid #eee;
+      border-top: 1px solid var(--border);
     }
+
     .settings summary {
       cursor: pointer;
-      color: #666;
+      color: var(--muted-foreground);
       font-size: 12px;
       user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s;
     }
+
     .settings summary:hover {
-      color: #333;
+      color: var(--foreground);
     }
+
+    .settings summary svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .settings summary::-webkit-details-marker {
+      display: none;
+    }
+
     .settings-content {
       padding-top: 12px;
     }
+
+    .settings label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted-foreground);
+      display: block;
+      margin-top: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .settings label:first-child {
+      margin-top: 0;
+    }
+
     .settings input {
       width: 100%;
       padding: 8px 10px;
       margin-top: 4px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
+      border: 1px solid var(--input);
+      border-radius: calc(var(--radius) - 4px);
       font-size: 12px;
+      font-family: 'Geist Mono', monospace;
+      background: var(--background);
+      color: var(--foreground);
+      transition: border-color 0.15s;
     }
+
+    .settings input::placeholder {
+      color: var(--muted-foreground);
+    }
+
     .settings input:focus {
       outline: none;
-      border-color: #1a73e8;
+      border-color: var(--ring);
     }
+
     .settings button {
       width: 100%;
       margin-top: 12px;
       padding: 8px;
       font-size: 12px;
-      background: #f1f3f4;
-      color: #333;
-      border: none;
-      border-radius: 4px;
+      font-weight: 500;
+      font-family: 'Geist', sans-serif;
+      background: var(--secondary);
+      color: var(--secondary-foreground);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) - 4px);
       cursor: pointer;
+      transition: background-color 0.15s;
     }
+
     .settings button:hover {
-      background: #e8eaed;
-    }
-    .settings label {
-      font-size: 11px;
-      color: #666;
-      display: block;
-      margin-top: 10px;
-    }
-    .settings label:first-child {
-      margin-top: 0;
+      background: var(--accent);
     }
   </style>
 </head>
 <body>
-  <h1><span class="icon">📑</span> Bookmark Keeper</h1>
+  <div class="header">
+    <h1>
+      <!-- Lucide: Bookmark -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+      </svg>
+      Bookmark Keeper
+    </h1>
+    <button id="theme-toggle" class="theme-toggle" title="Toggle theme">
+      <!-- Lucide: Moon (shown in light mode) -->
+      <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+      <!-- Lucide: Sun (shown in dark mode) -->
+      <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    </button>
+  </div>
   
   <div class="page-info">
     <div id="page-title" class="page-title">Loading...</div>
     <div id="page-url" class="page-url"></div>
     <div id="selection-indicator" class="selection-indicator">
-      <span class="icon">✓</span> Selection captured: <span id="selection-chars">0</span> chars
+      <!-- Lucide: Check -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 6 9 17l-5-5"/>
+      </svg>
+      <span>Selection captured</span>
+      <span class="char-count">(<span id="selection-chars">0</span> chars)</span>
     </div>
   </div>
   
   <div class="note-section">
-    <label for="note">Why are you saving this? (optional)</label>
+    <label for="note">Why are you saving this?</label>
     <textarea id="note" placeholder="Add a note about why this is interesting..."></textarea>
   </div>
   
-  <button id="save-btn" class="primary">Save Page</button>
-  <div id="status"></div>
+  <button id="save-btn" class="primary">
+    <!-- Lucide: Download -->
+    <svg class="icon-save" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+    </svg>
+    <!-- Lucide: Loader2 (for loading state) -->
+    <svg class="icon-loading spinner" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+    </svg>
+    <span class="btn-text">Save Page</span>
+  </button>
+  
+  <div id="status">
+    <svg class="status-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+    <span class="status-text"></span>
+  </div>
   
   <details class="settings">
-    <summary>⚙️ Settings</summary>
+    <summary>
+      <!-- Lucide: Settings -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+      </svg>
+      Settings
+    </summary>
     <div class="settings-content">
       <label for="token">GitHub Token</label>
       <input type="password" id="token" placeholder="ghp_xxxxx or gho_xxxxx">
