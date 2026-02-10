@@ -48,7 +48,7 @@ log "Found $ITEM_COUNT items in queue"
 
 if [[ "$ITEM_COUNT" -eq 0 ]]; then
     log "No items to process"
-    exit 0
+    # Still regenerate index in case files were added/changed manually
 fi
 
 # Process each item using Python
@@ -262,6 +262,80 @@ summary: "{summary_escaped}"
     log(f"  Saved to: {filename}")
     return True
 
+def generate_index():
+    """Generate INDEX.md from all bookmark files."""
+    log("Generating INDEX.md...")
+    
+    import glob
+    from collections import defaultdict
+    
+    # Find all markdown files (excluding INDEX.md)
+    md_files = glob.glob(os.path.join(BOOKMARKS_DIR, '*.md'))
+    md_files = [f for f in md_files if not f.endswith('INDEX.md')]
+    
+    if not md_files:
+        log("  No bookmark files found")
+        return
+    
+    # Parse each file and extract metadata
+    bookmarks_by_date = defaultdict(list)
+    
+    for filepath in md_files:
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Parse YAML frontmatter
+            if content.startswith('---'):
+                parts = content.split('---', 2)
+                if len(parts) >= 3:
+                    frontmatter = parts[1].strip()
+                    
+                    # Simple YAML parsing
+                    title = ''
+                    saved = ''
+                    summary = ''
+                    
+                    for line in frontmatter.split('\n'):
+                        if line.startswith('title:'):
+                            title = line[6:].strip().strip('"')
+                        elif line.startswith('saved:'):
+                            saved = line[6:].strip()
+                        elif line.startswith('summary:'):
+                            summary = line[8:].strip().strip('"')
+                    
+                    if saved and title:
+                        filename = os.path.basename(filepath)
+                        bookmarks_by_date[saved].append({
+                            'title': title,
+                            'filename': filename,
+                            'summary': summary
+                        })
+        except Exception as e:
+            log(f"  Warning: Could not parse {filepath}: {e}")
+    
+    # Generate INDEX.md content
+    today = datetime.now().strftime('%Y-%m-%d')
+    index_content = f"# Bookmark Index\n\n*Last updated: {today}*\n\n"
+    
+    # Sort dates descending (newest first)
+    for date in sorted(bookmarks_by_date.keys(), reverse=True):
+        index_content += f"## {date}\n\n"
+        for bm in bookmarks_by_date[date]:
+            summary_text = f" — {bm['summary']}" if bm['summary'] else ""
+            # Truncate long summaries for the index
+            if len(summary_text) > 150:
+                summary_text = summary_text[:147] + "..."
+            index_content += f"- [{bm['title']}](./{bm['filename']}){summary_text}\n"
+        index_content += "\n"
+    
+    # Write INDEX.md
+    index_path = os.path.join(BOOKMARKS_DIR, 'INDEX.md')
+    with open(index_path, 'w', encoding='utf-8') as f:
+        f.write(index_content)
+    
+    log(f"  Generated INDEX.md with {sum(len(v) for v in bookmarks_by_date.values())} bookmarks")
+
 def main():
     bookmarks = get_gist_content()
     processed = 0
@@ -281,6 +355,9 @@ def main():
             failed += 1
     
     log(f"Completed: {processed} processed, {failed} failed")
+    
+    # Always regenerate index after processing
+    generate_index()
 
 if __name__ == '__main__':
     main()
