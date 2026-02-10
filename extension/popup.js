@@ -6,20 +6,50 @@ const GIST_FILENAME = 'bookmark-queue.json';
 const saveBtn = document.getElementById('save-btn');
 const statusDiv = document.getElementById('status');
 const pageTitleDiv = document.getElementById('page-title');
+const pageUrlDiv = document.getElementById('page-url');
+const selectionIndicator = document.getElementById('selection-indicator');
+const selectionCharsSpan = document.getElementById('selection-chars');
+const noteTextarea = document.getElementById('note');
 const tokenInput = document.getElementById('token');
 const gistIdInput = document.getElementById('gist-id');
 const saveSettingsBtn = document.getElementById('save-settings');
+
+// Current page data
+let currentTab = null;
+let currentSelection = null;
 
 // Show status message
 function showStatus(message, type) {
   statusDiv.textContent = message;
   statusDiv.className = type;
+  
+  // Auto-clear success messages
+  if (type === 'success') {
+    setTimeout(() => {
+      statusDiv.textContent = '';
+      statusDiv.className = '';
+    }, 3000);
+  }
 }
 
 // Get current tab info
 async function getCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
+}
+
+// Get selected text from the page
+async function getSelectedText(tabId) {
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: () => window.getSelection().toString()
+    });
+    return results?.[0]?.result || null;
+  } catch (error) {
+    console.log('Could not get selection:', error);
+    return null;
+  }
 }
 
 // Load settings from storage
@@ -116,15 +146,15 @@ async function savePage() {
       return;
     }
     
-    // Get current tab
-    const tab = await getCurrentTab();
+    // Get note text
+    const note = noteTextarea.value.trim() || null;
     
     // Create bookmark object
     const bookmark = {
-      url: tab.url,
-      title: tab.title,
-      selection: null,  // Will be added in Milestone 5
-      note: null,       // Will be added in Milestone 5
+      url: currentTab.url,
+      title: currentTab.title,
+      selection: currentSelection,
+      note: note,
       timestamp: new Date().toISOString()
     };
     
@@ -134,6 +164,9 @@ async function savePage() {
     await updateGistContent(token, gistId, bookmarks);
     
     showStatus('✓ Saved!', 'success');
+    
+    // Clear the note field after saving
+    noteTextarea.value = '';
   } catch (error) {
     console.error('Error saving bookmark:', error);
     showStatus(`Error: ${error.message}`, 'error');
@@ -142,14 +175,32 @@ async function savePage() {
   }
 }
 
+// Truncate URL for display
+function truncateUrl(url, maxLength = 50) {
+  if (url.length <= maxLength) return url;
+  return url.substring(0, maxLength - 3) + '...';
+}
+
 // Initialize popup
 async function init() {
   // Load settings
   await loadSettings();
   
-  // Display current page title
-  const tab = await getCurrentTab();
-  pageTitleDiv.textContent = tab.title || 'Unknown page';
+  // Get current tab info
+  currentTab = await getCurrentTab();
+  pageTitleDiv.textContent = currentTab.title || 'Unknown page';
+  pageUrlDiv.textContent = truncateUrl(currentTab.url || '');
+  pageUrlDiv.title = currentTab.url; // Full URL on hover
+  
+  // Try to get selected text
+  currentSelection = await getSelectedText(currentTab.id);
+  if (currentSelection && currentSelection.trim()) {
+    currentSelection = currentSelection.trim();
+    selectionIndicator.classList.add('visible');
+    selectionCharsSpan.textContent = currentSelection.length;
+  } else {
+    currentSelection = null;
+  }
   
   // Check if token is configured
   const result = await chrome.storage.local.get(['githubToken']);
