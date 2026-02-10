@@ -15,6 +15,9 @@ if [[ -z "$TOKEN" ]]; then
     exit 1
 fi
 
+# Get OpenRouter API key for summarization (optional but recommended)
+OPENROUTER_API_KEY=$(security find-generic-password -s "openrouter-api-key" -w 2>/dev/null || echo "")
+
 # Ensure directories exist
 mkdir -p "$BOOKMARKS_DIR"
 
@@ -53,6 +56,7 @@ source "$VENV_DIR/bin/activate"
 
 export TOKEN
 export GIST_ID
+export OPENROUTER_API_KEY
 
 python3 << 'PYTHON_SCRIPT'
 import json
@@ -69,6 +73,7 @@ GIST_ID = os.environ.get('GIST_ID', 'd37553e2f87fd4d73381ac88c147da1c')
 GIST_FILENAME = 'bookmark-queue.json'
 BOOKMARKS_DIR = os.path.expanduser('~/clawd/workspace/bookmarks')
 TOKEN = os.environ.get('TOKEN')
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
 def log(msg):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
@@ -79,6 +84,44 @@ def slugify(text):
     text = re.sub(r'[^\w\s-]', '', text)
     text = re.sub(r'[-\s]+', '-', text)
     return text[:50].strip('-')
+
+def generate_summary(content, title):
+    """Generate a 2-3 sentence summary using OpenRouter API."""
+    if not OPENROUTER_API_KEY:
+        log("  No OpenRouter API key, skipping summary")
+        return ""
+    
+    try:
+        # Truncate content if too long (keep first ~4000 chars for context)
+        truncated = content[:4000] if len(content) > 4000 else content
+        
+        response = requests.post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://github.com/openclaw',
+                'X-Title': 'Bookmark Keeper'
+            },
+            json={
+                'model': 'anthropic/claude-3-haiku',
+                'max_tokens': 150,
+                'messages': [
+                    {
+                        'role': 'user',
+                        'content': f'Summarize this article in 2-3 sentences. Be specific and informative, not generic.\n\nTitle: {title}\n\nContent:\n{truncated}'
+                    }
+                ]
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        result = response.json()
+        summary = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        return summary
+    except Exception as e:
+        log(f"  Warning: Could not generate summary: {e}")
+        return ""
 
 def fetch_page_content(url):
     """Fetch and extract main content from URL."""
@@ -186,6 +229,14 @@ def process_bookmark(bookmark):
         content = f"*Failed to fetch content from {url}*"
         log(f"  Warning: Could not fetch content")
     
+    # Generate summary
+    summary = generate_summary(content, title)
+    if summary:
+        log(f"  Generated summary: {summary[:50]}...")
+    
+    # Escape summary for YAML
+    summary_escaped = summary.replace('"', '\\"').replace('\n', ' ')
+    
     # Build frontmatter
     frontmatter = f'''---
 title: "{title.replace('"', '\\"')}"
@@ -193,7 +244,7 @@ url: {url}
 saved: {date_str}
 note: {f'"{note}"' if note else 'null'}
 tags: []
-summary: ""
+summary: "{summary_escaped}"
 ---
 
 '''
